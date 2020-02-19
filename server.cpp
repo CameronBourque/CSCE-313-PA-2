@@ -172,8 +172,9 @@ int main(int argc, char *argv[]){
 	int opt;
 	while ((opt = getopt(argc, argv, "m:")) != -1) {
 		switch (opt) {
-			case 'b':
+			case 'm':
 				buffercapacity = atoi (optarg);
+				cout << buffercapacity << endl;
 				break;
 		}
 	}

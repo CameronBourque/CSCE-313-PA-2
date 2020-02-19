@@ -39,7 +39,7 @@ int FIFORequestChannel::open_pipe(string _pipe_name, int mode){
 	return fd;
 }
 
-int FIFORequestChannel::cread(char* msgbuf, int bufcapacity){
+int FIFORequestChannel::cread(void* msgbuf, int bufcapacity){
 	return read(rfd, msgbuf, bufcapacity); 
 }
 

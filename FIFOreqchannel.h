@@ -45,7 +45,7 @@ public:
 	 mechanisms associated with the channel. */
 
 
-	int cread(char* msgbuf, int bufcapacity);
+	int cread(void* msgbuf, int bufcapacity);
 	/* Blocking read of data from the channel. You must provide the address to properly allocated
 	memory buffer and its capacity as arguments. The 2nd argument is needed because the recepient 
 	side may not have as much capacity as the sender wants to send.
