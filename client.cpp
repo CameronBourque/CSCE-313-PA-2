@@ -53,23 +53,23 @@ void requestFile(string filename, int mem, FIFORequestChannel* chan){
     int runs = ceil((double)fileSize / (double)mem);
     msg.length = mem;
     for(int i = 0; i < runs; i++){
-	    if(runs - i == 1){
+        if(runs - i == 1){
             msg.length = (fileSize-msg.offset) % (__int64_t)mem;
-	    }
+        }
         memcpy((char*)requestBuf, (char*)&msg, sizeof(filemsg)); //overwrite the old msg request
-	    chan->cwrite(&requestBuf, filename.size() + 1 + sizeof(filemsg));
+        chan->cwrite(&requestBuf, filename.size() + 1 + sizeof(filemsg));
 
-	    unsigned char rsp[mem];
-	    int bytes = chan->cread((char*)rsp, mem);
-	    if(bytes < 1) {
-	        cout << "no bytes received" << endl;
-	        ofile.close();
-	        return;
-	    }
+        unsigned char rsp[mem];
+        int bytes = chan->cread((char*)rsp, mem);
+        if(bytes < 1) {
+            cout << "no bytes received" << endl;
+            ofile.close();
+            return;
+        }
 
-	    ofile.write((char*)rsp, bytes);
+        ofile.write((char*)rsp, bytes);
 
-	    msg.offset += mem;
+        msg.offset += mem;
     }
 
     ofile.close();
@@ -113,7 +113,7 @@ string requestNewChannel(FIFORequestChannel* chan){
 
 int main(int argc, char *argv[]){
     int n = 100;    // default number of requests per "patient"
-	int p = 15;		// number of patients
+    int p = 15;		// number of patients
     srand(time_t(NULL));
 
     struct timeval seedGen; //ACTUAL RANDOM NUMBER GENERATION
@@ -131,28 +131,28 @@ int main(int argc, char *argv[]){
     while((c = getopt(argc, argv, ":c:t:p:e:m:f:")) != -1){
         switch(c){
             case 't':
-		        time = atof(optarg);
-		        break;
-		    case 'p':
-		        patient = atoi(optarg);
-		        break;
-	        case 'e':
-		        ecg = atoi(optarg);
-		        break;
-	        case 'm':
-		        mem = atoi(optarg);
-	            break;
-	        case 'f':
-		        filename = optarg;
-		        break;
-	        case ':':
-	            switch(optopt){
-	                case 'c':
-	                    channel = true;
-	                    break;
-	            }
-		        break;
-	    }
+                time = atof(optarg);
+                break;
+            case 'p':
+                patient = atoi(optarg);
+                break;
+            case 'e':
+                ecg = atoi(optarg);
+                break;
+            case 'm':
+                mem = atoi(optarg);
+                break;
+            case 'f':
+                filename = optarg;
+                break;
+            case ':':
+                switch(optopt){
+                    case 'c':
+                        channel = true;
+                        break;
+                }
+                break;
+        }
     }
 
     //FORK AND SPLIT SERVER HERE
@@ -160,11 +160,11 @@ int main(int argc, char *argv[]){
     char* args[] = {"./server", "-m", (char*)memtoa.c_str(), NULL};
     int childP = fork();
     if(!childP){
-	    cout << "Starting server" << endl;
+        cout << "Starting server" << endl;
         int out = execvp("./server", args);
-	    if(out){
-	        cout << "FAILED TO START SERVER" << endl;
-	    }
+        if(out){
+            cout << "FAILED TO START SERVER" << endl;
+        }
     }
     
     FIFORequestChannel chan ("control", FIFORequestChannel::CLIENT_SIDE);
@@ -172,15 +172,14 @@ int main(int argc, char *argv[]){
     struct timeval start, end;
 
     //SINGLE DATA POINT REQUEST
-    if(patient > 0 && time < 59.999 && ecg > 0){
+    if(patient > 0 && patient <= p && time >= 0.000 && time < 59.999 && ecg <= 2 && ecg > 0){
         cout << "Requesting data point from input arguments" << endl;
         double value;
         gettimeofday(&start, NULL);
-	    value = requestData(patient, time, ecg, &chan);
-	    gettimeofday(&end, NULL);
-	    cout << "person " << patient << " time " << time << " ecg " << ecg << ": " << value << endl;
-	    cout << "Single Data Point Request Time: " << getTimeDiff(&start, &end) << endl;
-
+        value = requestData(patient, time, ecg, &chan);
+        gettimeofday(&end, NULL);
+        cout << "person " << patient << " time " << time << " ecg " << ecg << ": " << value << endl;
+        cout << "Single Data Point Request Time: " << getTimeDiff(&start, &end) << endl;
     }
 
     //X1 FILE WRITE
@@ -190,8 +189,8 @@ int main(int argc, char *argv[]){
     gettimeofday(&start, NULL);
 
     for(double tm = 0.000; tm < 59.999; tm += 0.004){
-	    double ret1 = requestData(1, tm, 1, &chan);
-	    double ret2 = requestData(1, tm, 2, &chan);
+        double ret1 = requestData(1, tm, 1, &chan);
+        double ret2 = requestData(1, tm, 2, &chan);
         ofile << tm << "," << ret1 << "," << ret2 << endl;
     }
 
