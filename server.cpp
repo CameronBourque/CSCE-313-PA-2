@@ -174,7 +174,6 @@ int main(int argc, char *argv[]){
 		switch (opt) {
 			case 'm':
 				buffercapacity = atoi (optarg);
-				cout << buffercapacity << endl;
 				break;
 		}
 	}

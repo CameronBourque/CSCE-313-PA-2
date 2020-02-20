@@ -4,3 +4,5 @@ server
 client
 dataserver
 *.csv
+empty
+.idea
