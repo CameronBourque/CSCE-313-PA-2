@@ -7,6 +7,7 @@
 #include "common.h"
 #include "FIFOreqchannel.h"
 #include <sys/wait.h>
+#include <sys/time.h>
 #include <unistd.h>
 
 using namespace std;
@@ -81,6 +82,18 @@ double getRandTime(){
     return atof(mash.c_str());
 }
 
+string getTimeDiff(struct timeval* start, struct timeval* end){
+    long sec = end->tv_sec - start->tv_sec;
+    long musec = end->tv_usec - start->tv_usec;
+
+    if(musec < 0){
+        musec += (int)1e6;
+        sec--;
+    }
+
+    return "sec = " + to_string(sec) + ", musec = " + to_string(musec);
+}
+
 string requestNewChannel(FIFORequestChannel* chan){
     //SEND CHANNEL REQUEST OUT
     MESSAGE_TYPE msg = NEWCHANNEL_MSG;
@@ -102,6 +115,10 @@ int main(int argc, char *argv[]){
     int n = 100;    // default number of requests per "patient"
 	int p = 15;		// number of patients
     srand(time_t(NULL));
+
+    struct timeval seedGen; //ACTUAL RANDOM NUMBER GENERATION
+    gettimeofday(&seedGen, NULL);
+    srand(seedGen.tv_usec * seedGen.tv_sec);
 
     //GET ARGUMENTS
     int patient, ecg;
@@ -152,18 +169,25 @@ int main(int argc, char *argv[]){
     
     FIFORequestChannel chan ("control", FIFORequestChannel::CLIENT_SIDE);
 
+    struct timeval start, end;
+
     //SINGLE DATA POINT REQUEST
     if(patient > 0 && time < 59.999 && ecg > 0){
         cout << "Requesting data point from input arguments" << endl;
         double value;
+        gettimeofday(&start, NULL);
 	    value = requestData(patient, time, ecg, &chan);
+	    gettimeofday(&end, NULL);
 	    cout << "person " << patient << " time " << time << " ecg " << ecg << ": " << value << endl;
+	    cout << "Single Data Point Request Time: " << getTimeDiff(&start, &end) << endl;
+
     }
 
     //X1 FILE WRITE
     cout << "Copying 1.csv into x1.csv" << endl;
     ofstream ofile;
     ofile.open("x1.csv");
+    gettimeofday(&start, NULL);
 
     for(double tm = 0.000; tm < 59.999; tm += 0.004){
 	    double ret1 = requestData(1, tm, 1, &chan);
@@ -171,12 +195,16 @@ int main(int argc, char *argv[]){
         ofile << tm << "," << ret1 << "," << ret2 << endl;
     }
 
+    gettimeofday(&end, NULL);
     ofile.close();
-
+    cout << "Data Point File Request Time: " << getTimeDiff(&start, &end) << endl;
     //FILE REQUEST
     if(filename.size() > 0){
         cout << "Duplicating file " << filename << " from input arguments" << endl;
+        gettimeofday(&start, NULL);
 	    requestFile(filename, mem, &chan);
+        gettimeofday(&end, NULL);
+        cout << "File Request Time: " << getTimeDiff(&start, &end) << endl;
     }
 
     //NEW CHANNEL REQUEST
@@ -212,8 +240,11 @@ int main(int argc, char *argv[]){
     }
 
     //EMPTY LARGE FILE REQUEST
-    cout << "Duplicating 100MB empty file" << endl;
+    cout << "Duplicating 100MB file" << endl;
+    gettimeofday(&start, NULL);
     requestFile("empty", mem, &chan);
+    gettimeofday(&end, NULL);
+    cout << "Large File Request Time: " << getTimeDiff(&start, &end) << endl;
 
     // closing the channel   
     MESSAGE_TYPE m = QUIT_MSG;
