@@ -1,8 +1,8 @@
 /*
-    Tanzir Ahmed
+    Cameron Bourque
     Department of Computer Science & Engineering
     Texas A&M University
-    Date  : 2/8/20
+    Date  : 2/21/20
  */
 #include "common.h"
 #include "FIFOreqchannel.h"
@@ -55,6 +55,9 @@ void requestFile(string filename, int mem, FIFORequestChannel* chan){
     for(int i = 0; i < runs; i++){
         if(runs - i == 1){
             msg.length = (fileSize-msg.offset) % (__int64_t)mem;
+	    if(!msg.length){
+                msg.length = (__int64_t)mem;
+	    }
         }
         memcpy((char*)requestBuf, (char*)&msg, sizeof(filemsg)); //overwrite the old msg request
         chan->cwrite(&requestBuf, filename.size() + 1 + sizeof(filemsg));
@@ -156,8 +159,7 @@ int main(int argc, char *argv[]){
     }
 
     //FORK AND SPLIT SERVER HERE
-    string memtoa = to_string(mem);
-    char* args[] = {"./server", "-m", (char*)memtoa.c_str(), NULL};
+    char* args[] = {"./server", "-m", (char*)to_string(mem).c_str(), NULL};
     int childP = fork();
     if(!childP){
         cout << "Starting server" << endl;
@@ -182,21 +184,26 @@ int main(int argc, char *argv[]){
         cout << "Single Data Point Request Time: " << getTimeDiff(&start, &end) << endl;
     }
 
-    //X1 FILE WRITE
-    cout << "Copying 1.csv into x1.csv" << endl;
-    ofstream ofile;
-    ofile.open("x1.csv");
-    gettimeofday(&start, NULL);
+    //Xp FILE WRITE (only patient is given)
+    else if(patient > 0 && patient <= p){
+        cout << "Copying " << patient << ".csv into x" << patient << ".csv" << endl;
+        ofstream ofile;
+	string filestr = "received/x" + to_string(patient) + ".csv";
+        ofile.open(filestr);
+        gettimeofday(&start, NULL);
 
-    for(double tm = 0.000; tm < 59.999; tm += 0.004){
-        double ret1 = requestData(1, tm, 1, &chan);
-        double ret2 = requestData(1, tm, 2, &chan);
-        ofile << tm << "," << ret1 << "," << ret2 << endl;
+        for(double tm = 0.000; tm < 59.999; tm += 0.004){
+            double ret1 = requestData(patient, tm, 1, &chan);
+            double ret2 = requestData(patient, tm, 2, &chan);
+            ofile << tm << "," << ret1 << "," << ret2 << endl;
+        }
+
+        gettimeofday(&end, NULL);
+        ofile.close();
+        cout << "Data Point File Request Time: " << getTimeDiff(&start, &end) << endl;
     }
 
-    gettimeofday(&end, NULL);
-    ofile.close();
-    cout << "Data Point File Request Time: " << getTimeDiff(&start, &end) << endl;
+
     //FILE REQUEST
     if(filename.size() > 0){
         cout << "Duplicating file " << filename << " from input arguments" << endl;
@@ -237,13 +244,6 @@ int main(int argc, char *argv[]){
             newChan.cwrite(&quit, sizeof(MESSAGE_TYPE));
         }
     }
-
-    //EMPTY LARGE FILE REQUEST
-    cout << "Duplicating 100MB file" << endl;
-    gettimeofday(&start, NULL);
-    requestFile("empty", mem, &chan);
-    gettimeofday(&end, NULL);
-    cout << "Large File Request Time: " << getTimeDiff(&start, &end) << endl;
 
     // closing the channel   
     MESSAGE_TYPE m = QUIT_MSG;
